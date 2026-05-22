@@ -26,7 +26,7 @@ import AppSidebar, { SidebarItem } from '@/components/layout/AppSidebar';
 import InternalBottomNav from '@/components/layout/InternalBottomNav';
 import EnableNotificationsButton from '@/components/EnableNotificationsButton';
 
-const COLORS = ['#C62828', '#FDD835', '#4CAF50', '#2196F3', '#9C27B0', '#FF5722', '#00BCD4', '#E91E63'];
+
 
 const ITEMS: SidebarItem[] = [
   { title: 'Problems', icon: AlertTriangle, value: 'problems' },
