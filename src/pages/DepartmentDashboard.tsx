@@ -10,6 +10,7 @@ import { DEPARTMENTS, STATUS_STAGES } from '@/lib/departments';
 import ProblemDetailModal from '@/components/admin/ProblemDetailModal';
 import InternalBottomNav from '@/components/layout/InternalBottomNav';
 import EnableNotificationsButton from '@/components/EnableNotificationsButton';
+import AnalyticsDashboard from '@/components/admin/AnalyticsDashboard';
 
 const DepartmentDashboard: React.FC = () => {
   const nav = useNavigate();
