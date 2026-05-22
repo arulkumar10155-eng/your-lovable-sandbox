@@ -9,9 +9,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import AppSidebar, { SidebarItem } from '@/components/layout/AppSidebar';
 import InternalBottomNav from '@/components/layout/InternalBottomNav';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import AppSidebar, { SidebarItem } from '@/components/layout/AppSidebar';
-import InternalBottomNav from '@/components/layout/InternalBottomNav';
 import {
   AlertTriangle, Users, Users2, Megaphone, Trophy, ShieldCheck, MapPin, Search, Phone, BarChart3,
 } from 'lucide-react';
@@ -22,9 +19,6 @@ import TeamManagement from './TeamManagement';
 import SocialPostsManager from './SocialPostsManager';
 import Leaderboards from './Leaderboards';
 import AnalyticsDashboard from './AnalyticsDashboard';
-import TeamManagement from './TeamManagement';
-import SocialPostsManager from './SocialPostsManager';
-import Leaderboards from './Leaderboards';
 import ConstituencyChoropleth from '@/components/maps/ConstituencyChoropleth';
 import EnableNotificationsButton from '@/components/EnableNotificationsButton';
 
