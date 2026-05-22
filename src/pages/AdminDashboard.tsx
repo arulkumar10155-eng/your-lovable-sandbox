@@ -91,13 +91,6 @@ const AdminDashboard: React.FC = () => {
   const resolved = problems.filter(p => ['completed', 'citizen_confirmed', 'resolved'].includes(p.status)).length;
   const emergency = problems.filter(p => p.urgency === 'emergency').length;
 
-  const byDept = Object.entries(problems.reduce((a: any, p) => ((a[p.department] = (a[p.department] || 0) + 1), a), {}))
-    .map(([name, value]) => ({ name, value })).sort((a: any, b: any) => (b.value as number) - (a.value as number)).slice(0, 8);
-  const byStatus = Object.entries(problems.reduce((a: any, p) => ((a[p.status] = (a[p.status] || 0) + 1), a), {}))
-    .map(([name, value]) => ({ name, value }));
-  const byConstituency = Object.entries(problems.reduce((a: any, p) => { if (p.constituency) a[p.constituency] = (a[p.constituency] || 0) + 1; return a; }, {}))
-    .map(([name, value]) => ({ name, value })).sort((a: any, b: any) => (b.value as number) - (a.value as number)).slice(0, 10);
-
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
