@@ -72,6 +72,10 @@ const DepartmentDashboard: React.FC = () => {
           <Card><CardContent className="p-3 text-center"><div className="text-2xl font-bold text-green-600">{resolved.length}</div><div className="text-[10px] text-muted-foreground">Resolved</div></CardContent></Card>
         </div>
 
+
+        <div id="dept-analytics" />
+        <AnalyticsDashboard scope={{ kind: 'department', department }} />
+
         <div id="dept-escalations" />
         {escalations.length > 0 && (
           <Card>
