@@ -120,6 +120,7 @@ const ConstituencyAdminDashboard: React.FC<Props> = ({ onLogout, assignedConstit
             </div>
 
             {tab === 'problems' && <ProblemsManagement isAdmin={false} allowedConstituencies={assignedConstituencies} />}
+            {tab === 'analytics' && <AnalyticsDashboard scope={{ kind: 'constituency', constituencies: assignedConstituencies }} />}
             {tab === 'cadres' && <CadreManagement isAdmin={false} allowedConstituencies={assignedConstituencies} />}
             {tab === 'teams' && <TeamManagement isAdmin={false} allowedConstituencies={assignedConstituencies} />}
             {tab === 'leaderboard' && <Leaderboards constituency={activeC} />}
