@@ -10,7 +10,7 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import AppSidebar, { SidebarItem } from '@/components/layout/AppSidebar';
 import InternalBottomNav from '@/components/layout/InternalBottomNav';
 import {
-  AlertTriangle, Users, Users2, Megaphone, Trophy, ShieldCheck, MapPin, Search, Phone,
+  AlertTriangle, Users, Users2, Megaphone, Trophy, ShieldCheck, MapPin, Search, Phone, BarChart3,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ProblemsManagement from './ProblemsManagement';
@@ -18,6 +18,7 @@ import CadreManagement from './CadreManagement';
 import TeamManagement from './TeamManagement';
 import SocialPostsManager from './SocialPostsManager';
 import Leaderboards from './Leaderboards';
+import AnalyticsDashboard from './AnalyticsDashboard';
 import ConstituencyChoropleth from '@/components/maps/ConstituencyChoropleth';
 import EnableNotificationsButton from '@/components/EnableNotificationsButton';
 
@@ -25,6 +26,7 @@ interface Props { onLogout: () => void; assignedConstituencies: string[] }
 
 const ITEMS: SidebarItem[] = [
   { title: 'Reports', icon: AlertTriangle, value: 'problems' },
+  { title: 'Analytics', icon: BarChart3, value: 'analytics' },
   { title: 'My Cadres', icon: Users, value: 'cadres' },
   { title: 'Teams', icon: Users2, value: 'teams' },
   { title: 'Leaderboard', icon: Trophy, value: 'leaderboard' },
@@ -118,6 +120,7 @@ const ConstituencyAdminDashboard: React.FC<Props> = ({ onLogout, assignedConstit
             </div>
 
             {tab === 'problems' && <ProblemsManagement isAdmin={false} allowedConstituencies={assignedConstituencies} />}
+            {tab === 'analytics' && <AnalyticsDashboard scope={{ kind: 'constituency', constituencies: assignedConstituencies }} />}
             {tab === 'cadres' && <CadreManagement isAdmin={false} allowedConstituencies={assignedConstituencies} />}
             {tab === 'teams' && <TeamManagement isAdmin={false} allowedConstituencies={assignedConstituencies} />}
             {tab === 'leaderboard' && <Leaderboards constituency={activeC} />}
