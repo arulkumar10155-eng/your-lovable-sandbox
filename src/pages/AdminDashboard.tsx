@@ -139,33 +139,7 @@ const AdminDashboard: React.FC = () => {
             {tab === 'teams' && <TeamManagement isAdmin={isAdmin} allowedConstituencies={allowed} />}
             {tab === 'leaderboard' && <Leaderboards />}
             {tab === 'map' && <ConstituencyChoropleth allowModeSwitch />}
-            {tab === 'analytics' && (
-              <div className="space-y-3">
-                <RealtimeStats />
-                <div className="grid md:grid-cols-2 gap-3">
-                  <Card><CardContent className="p-3 md:p-4">
-                    <div className="text-sm font-semibold mb-2">By Department</div>
-                    <div style={{ width: '100%', height: 260 }}>
-                      <ResponsiveContainer><BarChart data={byDept}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} /><Tooltip /><Bar dataKey="value" fill="#C62828" /></BarChart></ResponsiveContainer>
-                    </div>
-                  </CardContent></Card>
-                  <Card><CardContent className="p-3 md:p-4">
-                    <div className="text-sm font-semibold mb-2">By Stage</div>
-                    <div style={{ width: '100%', height: 260 }}>
-                      <ResponsiveContainer><PieChart><Pie data={byStatus} dataKey="value" nameKey="name" outerRadius={80} label={{ fontSize: 10 }}>
-                        {byStatus.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                      </Pie><Legend wrapperStyle={{ fontSize: 10 }} /><Tooltip /></PieChart></ResponsiveContainer>
-                    </div>
-                  </CardContent></Card>
-                  <Card className="md:col-span-2"><CardContent className="p-3 md:p-4">
-                    <div className="text-sm font-semibold mb-2">Top Constituencies</div>
-                    <div style={{ width: '100%', height: 260 }}>
-                      <ResponsiveContainer><BarChart data={byConstituency} layout="vertical"><CartesianGrid strokeDasharray="3 3" /><XAxis type="number" tick={{ fontSize: 10 }} /><YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 10 }} /><Tooltip /><Bar dataKey="value" fill="#FDD835" /></BarChart></ResponsiveContainer>
-                    </div>
-                  </CardContent></Card>
-                </div>
-              </div>
-            )}
+            {tab === 'analytics' && <AnalyticsDashboard scope={{ kind: 'super' }} />}
             {tab === 'compare' && <ComparisonView suggestions={[]} grievances={problems as any} volunteers={[]} />}
             {tab === 'feed' && <SocialPostsManager isAdmin={isAdmin} allowedConstituencies={allowed} />}
             {tab === 'works' && <CompletedWorksManager />}
