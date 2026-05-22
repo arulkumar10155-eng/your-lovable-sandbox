@@ -8,12 +8,8 @@ import {
   LogOut, Users, AlertTriangle, BarChart3, GitCompare, UserPlus, Megaphone,
   Shield, ListChecks, Users2, MapPin, Trophy, CheckCircle2
 } from 'lucide-react';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend
-} from 'recharts';
 import CreateAccountModal from '@/components/admin/CreateAccountModal';
-import RealtimeStats from '@/components/admin/RealtimeStats';
+import AnalyticsDashboard from '@/components/admin/AnalyticsDashboard';
 import ComparisonView from '@/components/admin/ComparisonView';
 import NotificationBell from '@/components/admin/NotificationBell';
 import ProblemsManagement from '@/components/admin/ProblemsManagement';
