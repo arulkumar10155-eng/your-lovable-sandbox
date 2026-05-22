@@ -26,6 +26,7 @@ interface Props { onLogout: () => void; assignedConstituencies: string[] }
 
 const ITEMS: SidebarItem[] = [
   { title: 'Reports', icon: AlertTriangle, value: 'problems' },
+  { title: 'Analytics', icon: BarChart3, value: 'analytics' },
   { title: 'My Cadres', icon: Users, value: 'cadres' },
   { title: 'Teams', icon: Users2, value: 'teams' },
   { title: 'Leaderboard', icon: Trophy, value: 'leaderboard' },
