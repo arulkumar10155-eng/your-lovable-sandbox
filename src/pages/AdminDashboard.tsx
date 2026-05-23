@@ -6,8 +6,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import {
   LogOut, Users, AlertTriangle, BarChart3, GitCompare, UserPlus, Megaphone,
-  Shield, ListChecks, Users2, MapPin, Trophy, CheckCircle2
+  Shield, ListChecks, Users2, MapPin, Trophy, CheckCircle2, Building2
 } from 'lucide-react';
+import WelfareManagement from '@/components/admin/WelfareManagement';
 import CreateAccountModal from '@/components/admin/CreateAccountModal';
 import AnalyticsDashboard from '@/components/admin/AnalyticsDashboard';
 import ComparisonView from '@/components/admin/ComparisonView';
@@ -30,6 +31,7 @@ import EnableNotificationsButton from '@/components/EnableNotificationsButton';
 
 const ITEMS: SidebarItem[] = [
   { title: 'Problems', icon: AlertTriangle, value: 'problems' },
+  { title: 'Welfare', icon: Building2, value: 'welfare' },
   { title: 'Cadres', icon: Users, value: 'cadres' },
   { title: 'Teams', icon: Users2, value: 'teams' },
   { title: 'Leaderboard', icon: Trophy, value: 'leaderboard' },
@@ -135,6 +137,7 @@ const AdminDashboard: React.FC = () => {
             </div>
 
             {tab === 'problems' && <ProblemsManagement isAdmin={isAdmin} allowedConstituencies={allowed} />}
+            {tab === 'welfare' && <WelfareManagement canEdit />}
             {tab === 'cadres' && <CadreManagement isAdmin={isAdmin} allowedConstituencies={allowed} />}
             {tab === 'teams' && <TeamManagement isAdmin={isAdmin} allowedConstituencies={allowed} />}
             {tab === 'leaderboard' && <Leaderboards />}

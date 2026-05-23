@@ -10,7 +10,7 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import AppSidebar, { SidebarItem } from '@/components/layout/AppSidebar';
 import InternalBottomNav from '@/components/layout/InternalBottomNav';
 import {
-  AlertTriangle, Users, Users2, Megaphone, Trophy, ShieldCheck, MapPin, Search, Phone, BarChart3,
+  AlertTriangle, Users, Users2, Megaphone, Trophy, ShieldCheck, MapPin, Search, Phone, BarChart3, Building2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ProblemsManagement from './ProblemsManagement';
@@ -19,6 +19,7 @@ import TeamManagement from './TeamManagement';
 import SocialPostsManager from './SocialPostsManager';
 import Leaderboards from './Leaderboards';
 import AnalyticsDashboard from './AnalyticsDashboard';
+import WelfareManagement from './WelfareManagement';
 import ConstituencyChoropleth from '@/components/maps/ConstituencyChoropleth';
 import EnableNotificationsButton from '@/components/EnableNotificationsButton';
 
@@ -26,6 +27,7 @@ interface Props { onLogout: () => void; assignedConstituencies: string[] }
 
 const ITEMS: SidebarItem[] = [
   { title: 'Reports', icon: AlertTriangle, value: 'problems' },
+  { title: 'Welfare', icon: Building2, value: 'welfare' },
   { title: 'Analytics', icon: BarChart3, value: 'analytics' },
   { title: 'My Cadres', icon: Users, value: 'cadres' },
   { title: 'Teams', icon: Users2, value: 'teams' },
@@ -120,6 +122,7 @@ const ConstituencyAdminDashboard: React.FC<Props> = ({ onLogout, assignedConstit
             </div>
 
             {tab === 'problems' && <ProblemsManagement isAdmin={false} allowedConstituencies={assignedConstituencies} />}
+            {tab === 'welfare' && <WelfareManagement scope={{ allowedConstituencies: assignedConstituencies }} canEdit />}
             {tab === 'analytics' && <AnalyticsDashboard scope={{ kind: 'constituency', constituencies: assignedConstituencies }} />}
             {tab === 'cadres' && <CadreManagement isAdmin={false} allowedConstituencies={assignedConstituencies} />}
             {tab === 'teams' && <TeamManagement isAdmin={false} allowedConstituencies={assignedConstituencies} />}
