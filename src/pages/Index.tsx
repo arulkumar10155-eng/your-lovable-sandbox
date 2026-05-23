@@ -3,6 +3,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import MobileBottomNav from '@/components/layout/MobileBottomNav';
 import ProblemReportingWizard from '@/components/ProblemReportingWizard';
+import WelfareReportingWizard from '@/components/WelfareReportingWizard';
 import LiveStats from '@/components/landing/LiveStats';
 import TrustTicker from '@/components/landing/TrustTicker';
 import CorruptionReportModal from '@/components/CorruptionReportModal';
@@ -11,12 +12,13 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
-  Shield, Users, Heart, CheckCircle, Lock, Eye, Database,
+  Shield, Users, Heart, CheckCircle, Lock, Eye, Database, Building2,
   ArrowRight, AlertTriangle, Search, MapPin, Activity, Briefcase, Map as MapIcon, Megaphone, UserPlus, LogIn
 } from 'lucide-react';
 
 const Index = () => {
   const [showProblemWizard, setShowProblemWizard] = useState(false);
+  const [showWelfareWizard, setShowWelfareWizard] = useState(false);
   const [showCorruption, setShowCorruption] = useState(false);
   const { language, isBilingual } = useLanguage();
   const [params, setParams] = useSearchParams();
@@ -27,6 +29,11 @@ const Index = () => {
       params.delete('report');
       setParams(params, { replace: true });
     }
+    if (params.get('welfare') === '1') {
+      setShowWelfareWizard(true);
+      params.delete('welfare');
+      setParams(params, { replace: true });
+    }
   }, [params, setParams]);
 
   const tt = (ta: string, en: string) => (isBilingual ? `${ta} / ${en}` : language === 'en' ? en : ta);
@@ -34,6 +41,7 @@ const Index = () => {
     isBilingual ? <>{ta}<span className="block text-base md:text-xl text-muted-foreground mt-1">{en}</span></> : (language === 'ta' ? ta : en);
 
   if (showProblemWizard) return <ProblemReportingWizard onClose={() => setShowProblemWizard(false)} />;
+  if (showWelfareWizard) return <WelfareReportingWizard onClose={() => setShowWelfareWizard(false)} />;
 
   const pillars = [
     { icon: AlertTriangle, ta: 'பொது பிரச்சனைகள்', en: 'Public Problems', desc_ta: 'புகைப்படத்துடன் புகார்', desc_en: 'Photo + GPS report', color: 'bg-red-500', action: () => setShowProblemWizard(true) },
@@ -179,6 +187,36 @@ const Index = () => {
               </p>
               <Button variant="outline" onClick={() => setShowCorruption(true)}>
                 <Megaphone className="w-4 h-4 mr-2" />{tt('அநாமதேய புகார்', 'Anonymous Report')}
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        {/* Welfare / Scheme Issue — new module */}
+        <section className="py-10 md:py-14 bg-background">
+          <div className="container mx-auto px-4">
+            <div className="max-w-4xl mx-auto bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-2 border-amber-200 dark:border-amber-900 rounded-3xl p-6 md:p-8 shadow-lg">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-amber-500 text-white flex items-center justify-center flex-shrink-0 text-2xl">🏛️</div>
+                <div className="min-w-0">
+                  <div className="inline-block text-[10px] font-semibold bg-amber-500 text-white px-2 py-0.5 rounded-full mb-1">NEW</div>
+                  <h2 className="text-xl md:text-2xl font-bold mb-1">{tt('நலத்திட்டம் / திட்ட சிக்கல்', 'Welfare / Scheme Issue')}</h2>
+                  <p className="text-xs md:text-sm text-muted-foreground">
+                    {tt('ஓய்வூதியம், ரேஷன், உதவித்தொகை, வீட்டுவசதி, சான்றிதழ் தாமதம் — அரசு உரிமை கிடைக்காமல் சிக்கினால் இங்கு புகாரளியுங்கள்.',
+                      'Pension stopped, ration denied, scholarship pending, certificate delayed — report any govt benefit/scheme issue here.')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 mb-5">
+                {['🍚 Ration','👴 Pension','🎓 Scholarship','🏠 Housing','👩 Women','🏥 Health','💼 Subsidy','📄 Certificate'].map((s, i) => (
+                  <div key={i} className="bg-card/80 border border-amber-200/60 dark:border-amber-900/40 rounded-lg p-2 text-center text-[11px] font-medium">{s}</div>
+                ))}
+              </div>
+
+              <Button size="lg" variant="hero" onClick={() => setShowWelfareWizard(true)} className="w-full sm:w-auto font-bold">
+                <Building2 className="w-5 h-5 mr-2" />{tt('நலத்திட்ட புகார் அளி', 'Report Welfare Issue')}
+                <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
           </div>

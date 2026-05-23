@@ -49,10 +49,9 @@ const ScrollToTop = () => {
   return null;
 };
 
+// Lightweight non-blocking top-bar avoids full-screen white flash between routes.
 const RouteFallback = () => (
-  <div className="min-h-screen flex items-center justify-center bg-background">
-    <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-  </div>
+  <div className="fixed top-0 left-0 right-0 h-0.5 bg-primary/70 z-[200] animate-pulse" />
 );
 
 const App = () => (

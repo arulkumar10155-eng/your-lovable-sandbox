@@ -4,13 +4,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogOut, AlertTriangle, ListChecks, Building2, BarChart3 } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { LogOut, AlertTriangle, ListChecks, Building2, BarChart3, FileBarChart } from 'lucide-react';
 import { toast } from 'sonner';
 import { DEPARTMENTS, STATUS_STAGES } from '@/lib/departments';
 import ProblemDetailModal from '@/components/admin/ProblemDetailModal';
 import InternalBottomNav from '@/components/layout/InternalBottomNav';
 import EnableNotificationsButton from '@/components/EnableNotificationsButton';
 import AnalyticsDashboard from '@/components/admin/AnalyticsDashboard';
+import WelfareManagement from '@/components/admin/WelfareManagement';
 
 const DepartmentDashboard: React.FC = () => {
   const nav = useNavigate();
@@ -72,83 +74,100 @@ const DepartmentDashboard: React.FC = () => {
           <Card><CardContent className="p-3 text-center"><div className="text-2xl font-bold text-green-600">{resolved.length}</div><div className="text-[10px] text-muted-foreground">Resolved</div></CardContent></Card>
         </div>
 
+        <Tabs defaultValue="problems" className="w-full">
+          <TabsList className="grid grid-cols-4 w-full">
+            <TabsTrigger value="problems"><ListChecks className="w-3.5 h-3.5 mr-1" />Problems</TabsTrigger>
+            <TabsTrigger value="welfare"><Building2 className="w-3.5 h-3.5 mr-1" />Welfare</TabsTrigger>
+            <TabsTrigger value="escalations"><AlertTriangle className="w-3.5 h-3.5 mr-1" />Escalations</TabsTrigger>
+            <TabsTrigger value="reports"><FileBarChart className="w-3.5 h-3.5 mr-1" />Reports</TabsTrigger>
+          </TabsList>
 
-        <div id="dept-analytics" />
-        <AnalyticsDashboard scope={{ kind: 'department', department }} />
-
-        <div id="dept-escalations" />
-        {escalations.length > 0 && (
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-orange-600" />Escalations to your department ({escalations.length})</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
-              {escalations.slice(0, 5).map(e => {
-                const p = problems.find(x => x.id === e.problem_id);
-                return (
-                  <div key={e.id} className="bg-orange-50 border border-orange-200 rounded p-2 text-xs">
-                    <div className="flex justify-between gap-2">
-                      <span className="font-mono text-[10px]">{p?.ticket_no || e.problem_id.slice(0,8)}</span>
-                      <Badge variant={e.status === 'open' ? 'destructive' : 'secondary'} className="text-[10px]">{e.status}</Badge>
+          <TabsContent value="problems" className="mt-3">
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><ListChecks className="w-4 h-4" />Problems · {dep?.en || department}</CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                {problems.length === 0 && <div className="text-xs text-muted-foreground py-6 text-center">No problems in your department yet.</div>}
+                {problems.map(p => {
+                  const stage = STATUS_STAGES.find(s => s.id === p.status);
+                  return (
+                    <div key={p.id} className="bg-card border rounded-lg p-3">
+                      <div className="flex flex-wrap gap-1 mb-1">
+                        <span className="font-mono text-[10px] bg-muted px-1.5 rounded">{p.ticket_no}</span>
+                        <Badge variant="outline" className="text-[10px]">{stage?.en || p.status}</Badge>
+                        {p.urgency === 'emergency' && <Badge className="bg-red-600 text-white text-[10px]">EMERGENCY</Badge>}
+                      </div>
+                      <div className="font-semibold text-sm break-words">{p.title}</div>
+                      <div className="text-[11px] text-muted-foreground mt-1 break-words">{[p.area, p.constituency, p.city].filter(Boolean).join(' · ')}</div>
+                      <div className="flex flex-wrap gap-2 mt-2 items-center">
+                        <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => setOpen(p)}>View details</Button>
+                        <select
+                          value={p.status}
+                          onChange={async (e) => {
+                            const upd: any = { status: e.target.value };
+                            if (['completed','resolved','citizen_confirmed'].includes(e.target.value)) upd.resolved_at = new Date().toISOString();
+                            const { error } = await supabase.from('problems').update(upd).eq('id', p.id);
+                            if (error) return toast.error(error.message);
+                            toast.success('Status updated'); load();
+                          }}
+                          className="h-7 text-[11px] rounded border border-input bg-background px-1"
+                        >
+                          {STATUS_STAGES.map(s => <option key={s.id} value={s.id}>{s.en}</option>)}
+                        </select>
+                      </div>
                     </div>
-                    <div className="font-medium mt-1 break-words">{e.reason}</div>
-                    {p && <Button size="sm" variant="outline" className="mt-2 h-7 text-[11px]" onClick={() => setOpen(p)}>View problem</Button>}
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-        )}
+                  );
+                })}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        <div id="dept-problems" />
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><ListChecks className="w-4 h-4" />Problems · {dep?.en || department}</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
-            {problems.length === 0 && <div className="text-xs text-muted-foreground py-6 text-center">No problems in your department yet.</div>}
-            {problems.map(p => {
-              const stage = STATUS_STAGES.find(s => s.id === p.status);
-              return (
-                <div key={p.id} className="bg-card border rounded-lg p-3">
-                  <div className="flex flex-wrap gap-1 mb-1">
-                    <span className="font-mono text-[10px] bg-muted px-1.5 rounded">{p.ticket_no}</span>
-                    <Badge variant="outline" className="text-[10px]">{stage?.en || p.status}</Badge>
-                    {p.urgency === 'emergency' && <Badge className="bg-red-600 text-white text-[10px]">EMERGENCY</Badge>}
-                  </div>
-                  <div className="font-semibold text-sm break-words">{p.title}</div>
-                  <div className="text-[11px] text-muted-foreground mt-1 break-words">{[p.area, p.constituency, p.city].filter(Boolean).join(' · ')}</div>
-                  <div className="flex flex-wrap gap-2 mt-2 items-center">
-                    <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => setOpen(p)}>View details</Button>
-                    <select
-                      value={p.status}
-                      onChange={async (e) => {
-                        const upd: any = { status: e.target.value };
-                        if (['completed','resolved','citizen_confirmed'].includes(e.target.value)) upd.resolved_at = new Date().toISOString();
-                        const { error } = await supabase.from('problems').update(upd).eq('id', p.id);
-                        if (error) return toast.error(error.message);
-                        toast.success('Status updated'); load();
-                      }}
-                      className="h-7 text-[11px] rounded border border-input bg-background px-1"
-                    >
-                      {STATUS_STAGES.map(s => <option key={s.id} value={s.id}>{s.en}</option>)}
-                    </select>
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
+          <TabsContent value="welfare" className="mt-3">
+            <WelfareManagement scope={{ department }} canEdit />
+          </TabsContent>
+
+          <TabsContent value="escalations" className="mt-3">
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-orange-600" />Escalations ({escalations.length})</CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                {escalations.length === 0 && <div className="text-xs text-muted-foreground py-6 text-center">No escalations.</div>}
+                {escalations.map(e => {
+                  const p = problems.find(x => x.id === e.problem_id);
+                  return (
+                    <div key={e.id} className="bg-orange-50 border border-orange-200 rounded p-2 text-xs">
+                      <div className="flex justify-between gap-2">
+                        <span className="font-mono text-[10px]">{p?.ticket_no || e.problem_id.slice(0,8)}</span>
+                        <Badge variant={e.status === 'open' ? 'destructive' : 'secondary'} className="text-[10px]">{e.status}</Badge>
+                      </div>
+                      <div className="font-medium mt-1 break-words">{e.reason}</div>
+                      {p && <Button size="sm" variant="outline" className="mt-2 h-7 text-[11px]" onClick={() => setOpen(p)}>View problem</Button>}
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="reports" className="mt-3 space-y-3">
+            <div className="bg-gradient-to-r from-primary/5 to-secondary/5 border border-primary/20 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <FileBarChart className="w-5 h-5 text-primary" />
+                <h2 className="font-bold">Command Center · {dep?.en || department}</h2>
+              </div>
+              <p className="text-xs text-muted-foreground">Real-time governance metrics, trends, and AI insights for your department.</p>
+            </div>
+            <AnalyticsDashboard scope={{ kind: 'department', department }} />
+          </TabsContent>
+        </Tabs>
       </main>
 
       {open && <ProblemDetailModal problem={open} onClose={() => setOpen(null)} />}
       <InternalBottomNav
         items={[
-          { title: 'Problems', icon: ListChecks, value: 'dept-problems' },
-          { title: 'Escalations', icon: AlertTriangle, value: 'dept-escalations' },
-          { title: 'Stats', icon: BarChart3, value: 'top' },
+          { title: 'Problems', icon: ListChecks, value: 'top' },
+          { title: 'Reports', icon: FileBarChart, value: 'top' },
         ]}
         activeValue=""
-        onSelect={(v) => {
-          if (v === 'top') window.scrollTo({ top: 0, behavior: 'smooth' });
-          else document.getElementById(v)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }}
+        onSelect={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         onLogout={logout}
       />
     </div>

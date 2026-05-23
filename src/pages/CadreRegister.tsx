@@ -9,6 +9,7 @@ import { Loader2, ShieldCheck, Camera, Upload as UploadIcon } from 'lucide-react
 import TVKLogo from '@/components/TVKLogo';
 import { constituenciesByCity as CONSTITUENCIES } from '@/lib/constituencies';
 import { CADRE_LEVELS } from '@/lib/cadreLevels';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
@@ -92,19 +93,28 @@ const CadreRegister: React.FC = () => {
               <div><Label>Password *</Label><Input type="password" value={f.password} onChange={e => set('password', e.target.value)} placeholder="6+ chars" required /></div>
               <div><Label>Phone *</Label><Input value={f.phone} onChange={e => set('phone', e.target.value.replace(/\D/g,'').slice(0,10))} required /></div>
               <div><Label>Level</Label>
-                <select className="w-full h-10 rounded border border-input bg-background px-2 text-sm" value={f.level} onChange={e => set('level', e.target.value)}>
-                  {CADRE_LEVELS.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
-                </select>
+                <Select value={f.level} onValueChange={(v) => set('level', v)}>
+                  <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {CADRE_LEVELS.map(l => <SelectItem key={l.id} value={l.id}>{l.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
-              <div><Label>City *</Label>
-                <select className="w-full h-10 rounded border border-input bg-background px-2 text-sm" value={f.city} onChange={e => { set('city', e.target.value); set('constituency',''); }} required>
-                  <option value="">--</option>{Object.keys(CONSTITUENCIES).map(c => <option key={c}>{c}</option>)}
-                </select>
+              <div><Label>City / District *</Label>
+                <Select value={f.city || undefined} onValueChange={(v) => { set('city', v); set('constituency', ''); }}>
+                  <SelectTrigger className="h-10"><SelectValue placeholder="--" /></SelectTrigger>
+                  <SelectContent>
+                    {Object.keys(CONSTITUENCIES).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
               <div><Label>Constituency</Label>
-                <select className="w-full h-10 rounded border border-input bg-background px-2 text-sm" value={f.constituency} onChange={e => set('constituency', e.target.value)} disabled={!f.city}>
-                  <option value="">--</option>{(CONSTITUENCIES[f.city]||[]).map(c => <option key={c}>{c}</option>)}
-                </select>
+                <Select value={f.constituency || undefined} onValueChange={(v) => set('constituency', v)} disabled={!f.city}>
+                  <SelectTrigger className="h-10"><SelectValue placeholder="--" /></SelectTrigger>
+                  <SelectContent>
+                    {(CONSTITUENCIES[f.city] || []).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
               <div><Label>Area</Label><Input value={f.area} onChange={e => set('area', e.target.value)} /></div>
               <div><Label>Ward Number</Label><Input value={f.ward_number} onChange={e => set('ward_number', e.target.value)} /></div>
