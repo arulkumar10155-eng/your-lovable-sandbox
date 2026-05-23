@@ -1323,6 +1323,137 @@ export type Database = {
         }
         Relationships: []
       }
+      welfare_issues: {
+        Row: {
+          address_line: string | null
+          application_id: string | null
+          area: string | null
+          citizen_confirmed: boolean | null
+          city: string
+          constituency: string | null
+          created_at: string
+          department: string | null
+          description: string
+          id: string
+          latitude: number | null
+          longitude: number | null
+          months_pending: string | null
+          pincode: string
+          proof_urls: string[] | null
+          reporter_age: number | null
+          reporter_name: string
+          reporter_phone: string
+          resolved_at: string | null
+          satisfaction_rating: number | null
+          scheme_name: string | null
+          scheme_type: string
+          status: string
+          subcategory: string
+          ticket_no: string
+          title: string
+          updated_at: string
+          urgency: string
+        }
+        Insert: {
+          address_line?: string | null
+          application_id?: string | null
+          area?: string | null
+          citizen_confirmed?: boolean | null
+          city: string
+          constituency?: string | null
+          created_at?: string
+          department?: string | null
+          description: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          months_pending?: string | null
+          pincode: string
+          proof_urls?: string[] | null
+          reporter_age?: number | null
+          reporter_name: string
+          reporter_phone: string
+          resolved_at?: string | null
+          satisfaction_rating?: number | null
+          scheme_name?: string | null
+          scheme_type: string
+          status?: string
+          subcategory: string
+          ticket_no?: string
+          title: string
+          updated_at?: string
+          urgency?: string
+        }
+        Update: {
+          address_line?: string | null
+          application_id?: string | null
+          area?: string | null
+          citizen_confirmed?: boolean | null
+          city?: string
+          constituency?: string | null
+          created_at?: string
+          department?: string | null
+          description?: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          months_pending?: string | null
+          pincode?: string
+          proof_urls?: string[] | null
+          reporter_age?: number | null
+          reporter_name?: string
+          reporter_phone?: string
+          resolved_at?: string | null
+          satisfaction_rating?: number | null
+          scheme_name?: string | null
+          scheme_type?: string
+          status?: string
+          subcategory?: string
+          ticket_no?: string
+          title?: string
+          updated_at?: string
+          urgency?: string
+        }
+        Relationships: []
+      }
+      welfare_updates: {
+        Row: {
+          created_at: string
+          id: string
+          note: string | null
+          proof_url: string | null
+          status: string
+          updated_by: string | null
+          welfare_issue_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          proof_url?: string | null
+          status: string
+          updated_by?: string | null
+          welfare_issue_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          proof_url?: string | null
+          status?: string
+          updated_by?: string | null
+          welfare_issue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "welfare_updates_welfare_issue_id_fkey"
+            columns: ["welfare_issue_id"]
+            isOneToOne: false
+            referencedRelation: "welfare_issues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       mv_city_problem_counts: {
