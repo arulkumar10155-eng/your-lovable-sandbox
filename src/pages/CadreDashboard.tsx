@@ -20,6 +20,7 @@ import EnableNotificationsButton from '@/components/EnableNotificationsButton';
 
 const CADRE_ITEMS: SidebarItem[] = [
   { title: 'Problems', icon: ListChecks, value: 'problems' },
+  { title: 'Welfare', icon: Building2, value: 'welfare' },
   { title: 'My Team', icon: Users2, value: 'team' },
   { title: 'Postings', icon: CalendarDays, value: 'postings' },
   { title: 'Escalations', icon: AlertTriangle, value: 'escalations' },
