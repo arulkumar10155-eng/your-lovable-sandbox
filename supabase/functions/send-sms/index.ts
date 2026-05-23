@@ -55,18 +55,23 @@ Deno.serve(async (req) => {
     const message = TEMPLATES[trigger](ticket_no);
     const idemKey = `${recordId}-${trigger}`;
 
+    const logIt = async (row: Record<string, unknown>) => {
+      if (welfareId) return; // sms_log is tied to problems; skip for welfare
+      await supabase.from('sms_log').insert({ problem_id: recordId, ...row });
+    };
+
     const { data: existing } = await supabase.from('sms_log').select('id, status').eq('idempotency_key', idemKey).maybeSingle();
     if (existing && existing.status === 'sent') {
       return new Response(JSON.stringify({ skipped: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     if (!to) {
-      await supabase.from('sms_log').insert({ problem_id: problem.id, trigger_code: trigger, recipient_phone: problem.reporter_phone || '', message, status: 'failed', error: 'invalid phone', idempotency_key: idemKey });
+      await logIt({ trigger_code: trigger, recipient_phone: reporter_phone || '', message, status: 'failed', error: 'invalid phone', idempotency_key: idemKey });
       return new Response(JSON.stringify({ error: 'invalid phone' }), { status: 400, headers: corsHeaders });
     }
 
     if (!TWILIO_FROM || !TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
-      await supabase.from('sms_log').insert({ problem_id: problem.id, trigger_code: trigger, recipient_phone: to, message, status: 'queued', error: 'twilio not configured', idempotency_key: idemKey });
+      await logIt({ trigger_code: trigger, recipient_phone: to, message, status: 'queued', error: 'twilio not configured', idempotency_key: idemKey });
       return new Response(JSON.stringify({ queued: true, configured: false }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
@@ -82,10 +87,10 @@ Deno.serve(async (req) => {
     });
     const data = await res.json();
     if (!res.ok) {
-      await supabase.from('sms_log').insert({ problem_id: problem.id, trigger_code: trigger, recipient_phone: to, message, status: 'failed', error: JSON.stringify(data).slice(0, 500), idempotency_key: idemKey });
+      await logIt({ trigger_code: trigger, recipient_phone: to, message, status: 'failed', error: JSON.stringify(data).slice(0, 500), idempotency_key: idemKey });
       return new Response(JSON.stringify({ error: data }), { status: 502, headers: corsHeaders });
     }
-    await supabase.from('sms_log').insert({ problem_id: problem.id, trigger_code: trigger, recipient_phone: to, message, status: 'sent', provider_sid: data.sid, sent_at: new Date().toISOString(), idempotency_key: idemKey });
+    await logIt({ trigger_code: trigger, recipient_phone: to, message, status: 'sent', provider_sid: data.sid, sent_at: new Date().toISOString(), idempotency_key: idemKey });
     return new Response(JSON.stringify({ ok: true, sid: data.sid }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (e) {
     console.error(e);
