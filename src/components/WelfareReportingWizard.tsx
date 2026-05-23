@@ -82,6 +82,9 @@ const WelfareReportingWizard: React.FC<Props> = ({ onClose }) => {
       }).select('id, ticket_no').single();
 
       if (error) { console.error(error); toast.error(error.message); return; }
+      // Fire-and-forget SMS confirmation to citizen
+      supabase.functions.invoke('send-sms', { body: { welfareId: inserted.id, trigger: 'WELFARE_SUBMITTED' } })
+        .catch(e => console.warn('[welfare-sms]', e));
       setTicket(inserted);
       setStep(5);
     } finally {
