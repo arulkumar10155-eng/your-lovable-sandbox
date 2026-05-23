@@ -207,6 +207,13 @@ const CadreDashboard: React.FC = () => {
             })}
           </TabsContent>
 
+          <TabsContent value="welfare" className="mt-3">
+            <WelfareManagement
+              scope={{ allowedConstituencies: cadre.constituency ? [cadre.constituency] : [] }}
+              canEdit={false}
+            />
+          </TabsContent>
+
           <TabsContent value="team" className="mt-3 space-y-2">
             {!team && <div className="text-sm text-muted-foreground py-6 text-center">You are not in any team yet.</div>}
             {team && (
