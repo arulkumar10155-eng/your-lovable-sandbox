@@ -18,6 +18,9 @@ const TEMPLATES: Record<string, (id: string) => string> = {
   REPORTED: (id) => `Makkal Connect: Your report has been successfully submitted. Report ID: ${id}. Our team will review and process it shortly. Track status anytime using your Report ID.`,
   WORK_STARTED: (id) => `Makkal Connect: Work has started on your reported issue (Report ID: ${id}). Our field team is currently addressing the problem. Thank you for your patience.`,
   COMPLETED: (id) => `Makkal Connect: Your reported issue (Report ID: ${id}) has been marked as completed by the field team. Thank you for helping improve your constituency.`,
+  WELFARE_SUBMITTED: (id) => `Makkal Connect: Your welfare/scheme issue has been received. Ticket: ${id}. We will follow up with the concerned department.`,
+  WELFARE_PROCESSING: (id) => `Makkal Connect: Your welfare/scheme issue (${id}) is now being processed by the concerned department.`,
+  WELFARE_RESOLVED: (id) => `Makkal Connect: Your welfare/scheme issue (${id}) has been resolved. Please confirm if the benefit reached you.`,
 };
 
 function normalizePhone(raw: string): string | null {
@@ -32,17 +35,30 @@ function normalizePhone(raw: string): string | null {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   try {
-    const { problemId, trigger } = await req.json();
-    if (!problemId || !trigger || !TEMPLATES[trigger]) {
+    const { problemId, welfareId, trigger } = await req.json();
+    if (!trigger || !TEMPLATES[trigger] || (!problemId && !welfareId)) {
       return new Response(JSON.stringify({ error: 'invalid input' }), { status: 400, headers: corsHeaders });
     }
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
-    const { data: problem } = await supabase.from('problems').select('id, ticket_no, reporter_phone').eq('id', problemId).maybeSingle();
-    if (!problem) return new Response(JSON.stringify({ error: 'not found' }), { status: 404, headers: corsHeaders });
+    let ticket_no = '', reporter_phone = '', recordId = '';
+    if (welfareId) {
+      const { data: w } = await supabase.from('welfare_issues').select('id, ticket_no, reporter_phone').eq('id', welfareId).maybeSingle();
+      if (!w) return new Response(JSON.stringify({ error: 'not found' }), { status: 404, headers: corsHeaders });
+      ticket_no = w.ticket_no; reporter_phone = w.reporter_phone; recordId = w.id;
+    } else {
+      const { data: problem } = await supabase.from('problems').select('id, ticket_no, reporter_phone').eq('id', problemId).maybeSingle();
+      if (!problem) return new Response(JSON.stringify({ error: 'not found' }), { status: 404, headers: corsHeaders });
+      ticket_no = problem.ticket_no; reporter_phone = problem.reporter_phone; recordId = problem.id;
+    }
 
-    const to = normalizePhone(problem.reporter_phone);
-    const message = TEMPLATES[trigger](problem.ticket_no);
-    const idemKey = `${problem.id}-${trigger}`;
+    const to = normalizePhone(reporter_phone);
+    const message = TEMPLATES[trigger](ticket_no);
+    const idemKey = `${recordId}-${trigger}`;
+
+    const logIt = async (row: Record<string, unknown>) => {
+      if (welfareId) return; // sms_log is tied to problems; skip for welfare
+      await supabase.from('sms_log').insert({ problem_id: recordId, ...row });
+    };
 
     const { data: existing } = await supabase.from('sms_log').select('id, status').eq('idempotency_key', idemKey).maybeSingle();
     if (existing && existing.status === 'sent') {
@@ -50,12 +66,12 @@ Deno.serve(async (req) => {
     }
 
     if (!to) {
-      await supabase.from('sms_log').insert({ problem_id: problem.id, trigger_code: trigger, recipient_phone: problem.reporter_phone || '', message, status: 'failed', error: 'invalid phone', idempotency_key: idemKey });
+      await logIt({ trigger_code: trigger, recipient_phone: reporter_phone || '', message, status: 'failed', error: 'invalid phone', idempotency_key: idemKey });
       return new Response(JSON.stringify({ error: 'invalid phone' }), { status: 400, headers: corsHeaders });
     }
 
     if (!TWILIO_FROM || !TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
-      await supabase.from('sms_log').insert({ problem_id: problem.id, trigger_code: trigger, recipient_phone: to, message, status: 'queued', error: 'twilio not configured', idempotency_key: idemKey });
+      await logIt({ trigger_code: trigger, recipient_phone: to, message, status: 'queued', error: 'twilio not configured', idempotency_key: idemKey });
       return new Response(JSON.stringify({ queued: true, configured: false }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
@@ -71,10 +87,10 @@ Deno.serve(async (req) => {
     });
     const data = await res.json();
     if (!res.ok) {
-      await supabase.from('sms_log').insert({ problem_id: problem.id, trigger_code: trigger, recipient_phone: to, message, status: 'failed', error: JSON.stringify(data).slice(0, 500), idempotency_key: idemKey });
+      await logIt({ trigger_code: trigger, recipient_phone: to, message, status: 'failed', error: JSON.stringify(data).slice(0, 500), idempotency_key: idemKey });
       return new Response(JSON.stringify({ error: data }), { status: 502, headers: corsHeaders });
     }
-    await supabase.from('sms_log').insert({ problem_id: problem.id, trigger_code: trigger, recipient_phone: to, message, status: 'sent', provider_sid: data.sid, sent_at: new Date().toISOString(), idempotency_key: idemKey });
+    await logIt({ trigger_code: trigger, recipient_phone: to, message, status: 'sent', provider_sid: data.sid, sent_at: new Date().toISOString(), idempotency_key: idemKey });
     return new Response(JSON.stringify({ ok: true, sid: data.sid }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (e) {
     console.error(e);

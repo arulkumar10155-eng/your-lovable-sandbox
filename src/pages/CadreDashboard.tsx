@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { LogOut, ListChecks, CalendarDays, AlertTriangle, User as UserIcon, Loader2, Upload, MapPin, Phone, Users2, Hand, UserCheck, Trophy, Star, Clock, X, Image as ImageIcon } from 'lucide-react';
+import { LogOut, ListChecks, CalendarDays, AlertTriangle, User as UserIcon, Loader2, Upload, MapPin, Phone, Users2, Hand, UserCheck, Trophy, Star, Clock, X, Image as ImageIcon, Building2 } from 'lucide-react';
+import WelfareManagement from '@/components/admin/WelfareManagement';
 import { STATUS_STAGES, DEPARTMENTS } from '@/lib/departments';
 import { toast } from 'sonner';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -19,6 +20,7 @@ import EnableNotificationsButton from '@/components/EnableNotificationsButton';
 
 const CADRE_ITEMS: SidebarItem[] = [
   { title: 'Problems', icon: ListChecks, value: 'problems' },
+  { title: 'Welfare', icon: Building2, value: 'welfare' },
   { title: 'My Team', icon: Users2, value: 'team' },
   { title: 'Postings', icon: CalendarDays, value: 'postings' },
   { title: 'Escalations', icon: AlertTriangle, value: 'escalations' },
@@ -203,6 +205,13 @@ const CadreDashboard: React.FC = () => {
                 </div>
               );
             })}
+          </TabsContent>
+
+          <TabsContent value="welfare" className="mt-3">
+            <WelfareManagement
+              scope={{ allowedConstituencies: cadre.constituency ? [cadre.constituency] : [] }}
+              canEdit={false}
+            />
           </TabsContent>
 
           <TabsContent value="team" className="mt-3 space-y-2">

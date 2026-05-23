@@ -54,6 +54,14 @@ const WelfareDetailModal: React.FC<Props> = ({ welfare, onClose, canEdit, onChan
       await supabase.from('welfare_updates').insert({
         welfare_issue_id: welfare.id, status: newStatus, note: note || null,
       });
+      // Fire-and-forget SMS to citizen for key milestones
+      const smsTrigger = newStatus === 'under_processing' || newStatus === 'dept_contacted'
+        ? 'WELFARE_PROCESSING'
+        : (newStatus === 'resolved' ? 'WELFARE_RESOLVED' : null);
+      if (smsTrigger) {
+        supabase.functions.invoke('send-sms', { body: { welfareId: welfare.id, trigger: smsTrigger } })
+          .catch(e => console.warn('[welfare-sms]', e));
+      }
       toast.success('Status updated');
       setNote('');
       onChanged?.();
