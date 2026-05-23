@@ -18,6 +18,9 @@ const TEMPLATES: Record<string, (id: string) => string> = {
   REPORTED: (id) => `Makkal Connect: Your report has been successfully submitted. Report ID: ${id}. Our team will review and process it shortly. Track status anytime using your Report ID.`,
   WORK_STARTED: (id) => `Makkal Connect: Work has started on your reported issue (Report ID: ${id}). Our field team is currently addressing the problem. Thank you for your patience.`,
   COMPLETED: (id) => `Makkal Connect: Your reported issue (Report ID: ${id}) has been marked as completed by the field team. Thank you for helping improve your constituency.`,
+  WELFARE_SUBMITTED: (id) => `Makkal Connect: Your welfare/scheme issue has been received. Ticket: ${id}. We will follow up with the concerned department.`,
+  WELFARE_PROCESSING: (id) => `Makkal Connect: Your welfare/scheme issue (${id}) is now being processed by the concerned department.`,
+  WELFARE_RESOLVED: (id) => `Makkal Connect: Your welfare/scheme issue (${id}) has been resolved. Please confirm if the benefit reached you.`,
 };
 
 function normalizePhone(raw: string): string | null {
