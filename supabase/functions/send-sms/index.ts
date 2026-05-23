@@ -35,17 +35,25 @@ function normalizePhone(raw: string): string | null {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   try {
-    const { problemId, trigger } = await req.json();
-    if (!problemId || !trigger || !TEMPLATES[trigger]) {
+    const { problemId, welfareId, trigger } = await req.json();
+    if (!trigger || !TEMPLATES[trigger] || (!problemId && !welfareId)) {
       return new Response(JSON.stringify({ error: 'invalid input' }), { status: 400, headers: corsHeaders });
     }
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
-    const { data: problem } = await supabase.from('problems').select('id, ticket_no, reporter_phone').eq('id', problemId).maybeSingle();
-    if (!problem) return new Response(JSON.stringify({ error: 'not found' }), { status: 404, headers: corsHeaders });
+    let ticket_no = '', reporter_phone = '', recordId = '';
+    if (welfareId) {
+      const { data: w } = await supabase.from('welfare_issues').select('id, ticket_no, reporter_phone').eq('id', welfareId).maybeSingle();
+      if (!w) return new Response(JSON.stringify({ error: 'not found' }), { status: 404, headers: corsHeaders });
+      ticket_no = w.ticket_no; reporter_phone = w.reporter_phone; recordId = w.id;
+    } else {
+      const { data: problem } = await supabase.from('problems').select('id, ticket_no, reporter_phone').eq('id', problemId).maybeSingle();
+      if (!problem) return new Response(JSON.stringify({ error: 'not found' }), { status: 404, headers: corsHeaders });
+      ticket_no = problem.ticket_no; reporter_phone = problem.reporter_phone; recordId = problem.id;
+    }
 
-    const to = normalizePhone(problem.reporter_phone);
-    const message = TEMPLATES[trigger](problem.ticket_no);
-    const idemKey = `${problem.id}-${trigger}`;
+    const to = normalizePhone(reporter_phone);
+    const message = TEMPLATES[trigger](ticket_no);
+    const idemKey = `${recordId}-${trigger}`;
 
     const { data: existing } = await supabase.from('sms_log').select('id, status').eq('idempotency_key', idemKey).maybeSingle();
     if (existing && existing.status === 'sent') {
