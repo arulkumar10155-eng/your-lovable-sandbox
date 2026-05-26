@@ -34,15 +34,15 @@ const Header: React.FC = () => {
 
           {/* Navigation */}
           <nav className="hidden lg:flex items-center gap-4 xl:gap-6">
-            <a href="/#participate" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors whitespace-nowrap">
+            <Link to="/#participate" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors whitespace-nowrap">
               {isBilingual ? 'தூண்கள் / Pillars' : (language === 'ta' ? 'தூண்கள்' : 'Pillars')}
-            </a>
-            <a href="/track" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors whitespace-nowrap">
+            </Link>
+            <Link to="/track" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors whitespace-nowrap">
               {isBilingual ? 'புகார் கண்காணி / Track' : (language === 'ta' ? 'புகார் கண்காணி' : 'Track')}
-            </a>
-            <a href="/#categories" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors whitespace-nowrap">
+            </Link>
+            <Link to="/#categories" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors whitespace-nowrap">
               {isBilingual ? 'பிரிவுகள் / Categories' : (language === 'ta' ? 'பிரிவுகள்' : 'Categories')}
-            </a>
+            </Link>
           </nav>
 
           {/* Language Selector & CTA */}

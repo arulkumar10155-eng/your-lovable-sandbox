@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
@@ -16,6 +17,7 @@ import TVKLogo from './TVKLogo';
 interface Props { onClose: () => void }
 
 const ProblemReportingWizard: React.FC<Props> = ({ onClose }) => {
+  const navigate = useNavigate();
   const { language, isBilingual } = useLanguage();
   const tt = (ta: string, en: string) => (isBilingual ? `${ta} / ${en}` : language === 'en' ? en : ta);
 
@@ -177,7 +179,7 @@ const ProblemReportingWizard: React.FC<Props> = ({ onClose }) => {
             {tt('இந்த எண்ணைப் பயன்படுத்தி எந்த நேரத்திலும் நிலையை சரிபார்க்கலாம்', 'Use this number to track status anytime')}
           </p>
           <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => window.location.href = `/track?t=${ticket.ticket_no}`}>{tt('நிலை காண', 'Track Status')}</Button>
+            <Button variant="outline" className="flex-1" onClick={() => navigate(`/track?t=${ticket.ticket_no}`)}>{tt('நிலை காண', 'Track Status')}</Button>
             <Button variant="hero" className="flex-1" onClick={onClose}>{tt('முடிக்க', 'Done')}</Button>
           </div>
         </div>
