@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, HashLink } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import TVKLogo from './TVKLogo';
 import { Button } from './ui/button';
 import { useLanguage, useLandingTranslation } from '@/contexts/LanguageContext';
