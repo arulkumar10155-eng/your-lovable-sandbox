@@ -54,13 +54,10 @@ const ProblemDetailModal: React.FC<{ problem: any; onClose: () => void }> = ({ p
 
   useEffect(() => {
     (async () => {
-      const [m, u, a, e] = await Promise.all([
-        supabase.from('problem_media').select('*').eq('problem_id', problem.id),
-        supabase.from('problem_updates').select('*').eq('problem_id', problem.id).order('created_at', { ascending: false }),
-        supabase.from('problem_assignments').select('*').eq('problem_id', problem.id),
-        supabase.from('escalations').select('*').eq('problem_id', problem.id).order('created_at', { ascending: false }),
-      ]);
-      const aRows = a.data || [];
+      // Single round-trip: problem + media + updates + assignments + escalations.
+      const { data } = await (supabase.rpc as any)('problem_detail', { _id: problem.id });
+      const payload: any = data || {};
+      const aRows: any[] = payload.assignments || [];
       const cadreIds = Array.from(new Set(aRows.flatMap((r: any) => [r.cadre_id, r.claimed_by_cadre_id]).filter(Boolean)));
       const teamIds = Array.from(new Set(aRows.map((r: any) => r.team_id).filter(Boolean)));
       const [{ data: cs }, { data: ts }] = await Promise.all([
@@ -75,7 +72,10 @@ const ProblemDetailModal: React.FC<{ problem: any; onClose: () => void }> = ({ p
         claimed_by_cadre: r.claimed_by_cadre_id ? cMap.get(r.claimed_by_cadre_id) : null,
         teams: r.team_id ? tMap.get(r.team_id) : null,
       }));
-      setMedia(m.data || []); setUpdates(u.data || []); setAssignments(enriched); setEscalations(e.data || []);
+      setMedia(payload.media || []);
+      setUpdates(payload.updates || []);
+      setAssignments(enriched);
+      setEscalations(payload.escalations || []);
     })();
   }, [problem.id]);
 
