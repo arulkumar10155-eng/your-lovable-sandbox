@@ -41,17 +41,17 @@ export const CommandCenterKpis: React.FC<{ scope: Scope }> = ({ scope }) => {
     staleTime: 60_000,
     queryFn: async () => {
       if (scope.kind === 'department') {
-        const { data } = await supabase.rpc('get_department_kpis', { _department: scope.department });
-        const row = (data || [])[0] || {};
+        const { data } = await (supabase.rpc as any)('get_department_kpis', { _department: scope.department });
+        const row: any = (data || [])[0] || {};
         return {
-          total: row.total, open: row.open_count, resolved: row.resolved_count,
-          resolvedToday: row.resolved_today, emergency: row.emergency_count,
-          avgRes: row.avg_resolution_hours, reports24h: row.reports_24h,
+          total: Number(row.total || 0), open: Number(row.open_count || 0), resolved: Number(row.resolved_count || 0),
+          resolvedToday: Number(row.resolved_today || 0), emergency: Number(row.emergency_count || 0),
+          avgRes: Number(row.avg_resolution_hours || 0), reports24h: Number(row.reports_24h || 0),
         };
       }
       const params = scope.kind === 'constituency' && scope.constituencies.length === 1
         ? { _constituency: scope.constituencies[0] } : {};
-      const { data } = await supabase.rpc('get_constituency_kpis', params);
+      const { data } = await (supabase.rpc as any)('get_constituency_kpis', params);
       const rows = data || [];
       const filtered = scope.kind === 'constituency'
         ? rows.filter((r: any) => scope.constituencies.includes(r.constituency))
