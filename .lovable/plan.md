@@ -1,63 +1,145 @@
-# Mobile & UX Fixes — Batch Plan
+# Scale & Reliability Plan — Makkal Connect
 
-## 1. Dropdown overflow on small screens
-Files: `ProblemReportingWizard.tsx`, `CorruptionReportModal.tsx`, `GrievanceWizard.tsx`, `SuggestionWizard.tsx`.
-- Wrap shadcn `SelectContent` with `className="max-h-[60vh] w-[var(--radix-select-trigger-width)]"` and `position="popper" sideOffset={4} avoidCollisions`.
-- Apply same to District/Constituency/Category/Department/Incident dropdowns.
+Goal: hold **1Cr+ reports, 50L+ cadres, 100k+ concurrent users** without crashes or UI freezes. The `.lovable/architecture.md` target was set but most of it is not yet implemented in code. This plan closes that gap.
 
-## 2. Saved-password not auto-logging in (PWA/mobile)
-Files: `src/integrations/supabase/client.ts` is generated — fix in login pages instead.
-- In `CadreLogin.tsx` / `AdminLogin.tsx` / `MobileAuth.tsx`: on mount, check `supabase.auth.getSession()` and if session exists, redirect to respective dashboard. Currently it likely renders the form even with a valid session.
+## Current Bottlenecks (audit findings)
 
-## 3. Image/video preview — modal instead of redirect
-- Create `src/components/MediaPreviewModal.tsx` (handles image, video, audio, pdf via iframe).
-- Replace all `<a href={url} target="_blank">` for evidence/proof URLs in: `admin/CorruptionReports.tsx`, `admin/ProblemDetailModal.tsx`, `CadreDashboard.tsx`, public feeds. Convert to button onClick → open modal.
+**Database / query layer**
+- `AdminDashboard` loads `problems.select('*').limit(2000)` on every mount — pulls megabytes per admin per refetch.
+- `DepartmentDashboard` pulls 500 problems + 200 escalations with `select('*')`.
+- `CadreManagement`, `WelfareManagement`, `SocialPostsManager`, `CorruptionReports`, `ModeratorDashboard`, `TeamManagement`, `ProblemsManagement` all do `select('*')` with no cursor — silent 1000-row Supabase cap, OFFSET pagination, full payloads on every realtime tick.
+- `AssignProblemModal` loads **all active cadres + all teams** in one shot.
+- `ProblemDetailModal` fires 4 parallel `select('*')` per open.
+- No partitioning on `problems` / `problem_updates` / `problem_assignments`.
+- Only 3 MVs exist (`mv_public_stats`, `mv_city_problem_counts`, `mv_constituency_problem_counts`); KPIs and leaderboards still aggregate base tables live.
 
-## 4. X-remove button on cadre proof uploads
-File: `CadreDashboard.tsx` (or the proof-upload component).
-- Add absolute-positioned `×` button top-right on each before/after preview tile.
+**Realtime layer**
+- `ProblemsManagement`, `LiveMap`, `TrustTicker`, `AnalyticsDashboard`, `ConstituencyChoropleth` subscribe to **global** `problems` channel `event: '*'`. Every insert anywhere broadcasts to every connected admin → WS storm + full refetch each time.
+- Only `LiveStats` and `LiveMap` throttle; the others call `load` directly.
 
-## 5. Remove sidebar trigger from internal top bar
-Files: layouts that include `SidebarTrigger`.
-- Remove `<SidebarTrigger />` from internal headers in `AdminDashboard.tsx`, `CadreDashboard.tsx`, `DepartmentDashboard.tsx`, etc. Mobile uses `InternalBottomNav`.
+**Frontend**
+- All routes are statically imported — first paint ships every admin chunk (Recharts, Leaflet, etc.).
+- No list virtualization anywhere; rendering 500–2000 rows at once is the freeze source.
+- React Query is global but most components bypass it via raw `useEffect + supabase.from()`, so caches aren't shared across tabs/components.
+- Images served as originals from Storage; no thumbs / `srcset`.
 
-## 6. PWA safe-area: content rendering above top bar
-File: `index.css` + main app shells.
-- Add `viewport-fit=cover` already present? Add `padding-top: env(safe-area-inset-top)` to fixed top bars in role interfaces; `padding-bottom: env(safe-area-inset-bottom)` to bottom nav.
+**Write path / notifications**
+- `send-sms` and welfare/problem inserts run inline in the request — slow under burst.
+- No `idempotency_key` on mutations; double-tap submits duplicate rows.
+- No rate limiting on public report submission → DoS exposure.
 
-## 7. Prevent background swipe when modal open
-- In modal components, add `useEffect` that sets `document.body.style.overflow = 'hidden'` + `touch-action: none` on mount, restore on unmount. Centralize in a small `useLockBodyScroll` hook.
+**Observability**
+- No `pg_stat_statements` review loop, no slow-query alerting, no error budget tracking.
 
-## 8. Map hidden by expanded bottom bar
-File: `MobileBottomNav.tsx` / `InternalBottomNav.tsx` + `LiveMap.tsx`.
-- When bottom nav expanded ("More" sheet), use portal/overlay instead of pushing content. Ensure map container has proper `height: calc(100dvh - bottom-nav-height)` not affected by sheet.
+---
 
-## 9. Corruption report detail modal
-File: `admin/CorruptionReports.tsx`.
-- Add row click → opens `CorruptionDetailModal` showing all fields, evidence (via MediaPreviewModal), status updater, action buttons.
+## Implementation Plan (phased, ship in order)
 
-## 10. Cadres detail modal + list avatars
-File: `admin/CadreManagement.tsx`.
-- List: show small circular `photo_url` avatar left of name; show only relevant info (name, level, location, status badge).
-- Click row → `CadreDetailModal` containing: full info + role dropdown, Approve, Deactivate, Public Directory toggle.
+### Phase 1 — Kill unbounded queries (biggest, safest win)
 
-## 11. Problems list — unviewed state + faded completed
-File: `admin/ProblemsManagement.tsx`.
-- Track `viewed_by_admin` (use localStorage set of IDs to avoid migration, OR add column). Use localStorage approach: `viewed-problems` Set in localStorage.
-- Unviewed row: subtle blue bg + animated pulsing "Not viewed yet" badge.
-- Completed/citizen-confirmed: `opacity-60`.
+1. Create SQL RPCs for every hot list, returning **only required columns + `next_cursor`**:
+   - `feed_page(_constituency text, _status text, _cursor uuid, _limit int default 25)`
+   - `cadre_page(_constituency, _cursor, _limit)`
+   - `welfare_page(_constituency, _status, _cursor, _limit)`
+   - `escalation_page`, `corruption_page`, `team_page`, `social_post_page`
+2. Replace every `supabase.from('X').select('*')` list call with the matching RPC + `useInfiniteQuery`. Hard cap 100, default 25.
+3. Slim `ProblemDetailModal` to one RPC `problem_detail(_id)` returning media+updates+assignments+escalations in a single round-trip.
+4. Convert all admin lists to `@tanstack/react-virtual` (only render visible rows).
 
-## 12. Timeline messages — better UI
-File: `ProblemDetailModal.tsx` / wherever timeline renders.
-- Convert timeline to vertical stepper with colored dots per status, human-readable labels ("Report received", "Team assigned", "Work started", "Completed"), relative timestamps ("2 hours ago"), and bilingual text.
+### Phase 2 — Scope realtime, stop the storm
 
-## Order of execution
-Phase A (quick wins): 1, 5, 6, 7, 4
-Phase B (modals): 3 (MediaPreview), 9, 10, 12
-Phase C (logic): 2, 8, 11
+1. Replace global `supabase.channel('admin-problems').on('postgres_changes', { table: 'problems' }, load)` with **constituency- or department-scoped** channels using `filter: 'constituency=eq.X'`.
+2. Wrap every realtime handler in the existing `throttle(fn, 1000)` from `src/lib/throttle.ts`.
+3. Realtime events should **invalidate React Query keys**, not refetch full lists, so cached pages stay warm.
+4. Add a 30s polling fallback only for lists >500 rows; drop WS subscription on those.
 
-## Tech notes
-- New shared hook: `src/hooks/use-lock-body-scroll.ts`.
-- New shared component: `src/components/MediaPreviewModal.tsx`.
-- localStorage key for problem viewed-tracking: `tvk:viewed-problems`.
-- No DB migrations required unless we want server-side "viewed" tracking — defaulting to localStorage to keep this lean. Confirm if you want it server-side instead.
+### Phase 3 — Aggregations & dashboards via MVs
+
+1. New MVs refreshed every 60s by `pg_cron`:
+   - `mv_constituency_kpis` (open, resolved, sla_breached, avg_resolution_hours, emergency_count per constituency)
+   - `mv_department_kpis` (same, grouped by department)
+   - `mv_cadre_leaderboard` (top 500 cadres precomputed)
+   - `mv_problem_trends_daily` (date, constituency, category, count, resolved_count)
+2. Rewrite `AnalyticsDashboard` and command-centre KPI cards to read **only** from these MVs via thin RPCs. Zero base-table scans on dashboard load.
+
+### Phase 4 — Partitioning + indexes for 1Cr rows
+
+1. Enable `pg_partman`; convert `problems`, `problem_updates`, `problem_assignments`, `sms_log` to monthly `RANGE(created_at)` partitions with auto-create + auto-detach.
+2. Add composite indexes: `(constituency, status, created_at DESC)`, `(department, status, created_at DESC)`, `(category, created_at DESC)`.
+3. BRIN index on `created_at` for archive-range scans.
+4. Nightly cron: move rows `resolved AND created_at < now()-12mo` to `problems_archive`.
+
+### Phase 5 — Write path hardening
+
+1. Add `idempotency_key TEXT UNIQUE` to `problems`, `welfare_issues`, `suggestions`, `grievances`, `volunteers`, `corruption_reports`. Frontend submits a UUID per wizard session; reuse on retry.
+2. Move SMS/email out of request path: enqueue to `pgmq` (`notifications_sms`, `notifications_email`); cron worker drains in batches; `send-sms` edge fn becomes the drain consumer.
+3. Edge-function token-bucket rate limit (IP + phone) on public submission endpoints.
+4. Storage: signed-URL flow already in place — add `?width=…` Supabase Image Transformation and `srcset` for every media render; lazy-load below the fold.
+
+### Phase 6 — Frontend perf
+
+1. `React.lazy()` all admin/heavy routes (`AdminDashboard`, `DepartmentDashboard`, `CadreDashboard`, `LiveMap`, `GroundIntelligence`, `AnalyticsDashboard`, `ConstituencyChoropleth`). Keep public routes static so landing stays fast.
+2. Move every component-level `useEffect + supabase` fetch to `useQuery` with a stable key — single source of truth, cross-component cache hits.
+3. Persist KPI query cache via `@tanstack/query-persist-client-core` + `BroadcastChannel` (tab-to-tab invalidation).
+4. Skeletons for every list; remove blocking spinners.
+
+### Phase 7 — Observability & SLOs
+
+1. Enable `pg_stat_statements`; weekly Slack/email digest of top-20 slow queries (>250ms p95).
+2. Edge-function logs → structured JSON, sampled error log shipped to `error_events` table.
+3. SLOs: p95 list query <300ms, error rate <1%, realtime fan-out <500 msg/sec/admin.
+4. Synthetic loadtest in CI with k6: 50k report inserts + 10k concurrent dashboard reads against staging branch before merge.
+
+### Phase 8 — Infra
+
+- Recommend Supabase **Large** instance at 25k DAU, **XL** at 100k DAU; pgbouncer transaction pooling enforced.
+- Storage lifecycle: evidence >24mo → cold bucket.
+- CDN cache `LiveStats` endpoint (`Cache-Control: public, max-age=60, stale-while-revalidate=300`).
+
+---
+
+## Technical Details
+
+**Cursor pagination shape (every list RPC):**
+```sql
+CREATE FUNCTION public.feed_page(_constituency text, _status text, _cursor uuid, _limit int)
+RETURNS TABLE(...cols, next_cursor uuid) ...
+WHERE (_constituency IS NULL OR constituency = _constituency)
+  AND (_status IS NULL OR status = _status)
+  AND (_cursor IS NULL OR id < _cursor)
+ORDER BY id DESC
+LIMIT LEAST(_limit, 100);
+```
+
+**Realtime scoping example:**
+```ts
+supabase.channel(`problems:${constituency}`)
+  .on('postgres_changes',
+    { event: '*', schema: 'public', table: 'problems', filter: `constituency=eq.${constituency}` },
+    throttle(() => qc.invalidateQueries({ queryKey: ['feed', constituency] }), 1000))
+  .subscribe();
+```
+
+**Partitioning:**
+```sql
+SELECT partman.create_parent(
+  p_parent_table => 'public.problems',
+  p_control => 'created_at',
+  p_type => 'range',
+  p_interval => 'monthly',
+  p_premake => 3
+);
+```
+
+---
+
+## Sequencing & Risk
+
+Phases 1–2 deliver ~80% of the perceived speedup with **zero schema risk** — ship first. Phase 3–4 require coordinated migrations (partition swap is online via `pg_partman` but needs a maintenance window for the initial migration of existing `problems` rows). Phases 5–7 are additive. Each phase is independently shippable.
+
+## What I need from you before building
+
+1. **Phase scope** — ship all 8 phases sequentially, or start with 1+2+3 (highest impact, lowest risk) and review?
+2. **Partitioning window** — OK to schedule a ~10min maintenance window for the initial `problems` partition swap, or use an online dual-write migration (slower, safer)?
+3. **Archive cutoff** — keep resolved rows hot for 12 months as planned, or longer?
+4. **Loadtest target** — confirm 100k concurrent / 1Cr rows is the target, or different numbers?
