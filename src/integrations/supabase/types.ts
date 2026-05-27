@@ -648,6 +648,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "problem_assignments_cadre_id_fkey"
+            columns: ["cadre_id"]
+            isOneToOne: false
+            referencedRelation: "mv_cadre_leaderboard"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "problem_assignments_problem_id_fkey"
             columns: ["problem_id"]
             isOneToOne: false
@@ -1148,6 +1155,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "team_members_cadre_id_fkey"
+            columns: ["cadre_id"]
+            isOneToOne: false
+            referencedRelation: "mv_cadre_leaderboard"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "team_members_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
@@ -1250,6 +1264,13 @@ export type Database = {
             columns: ["lead_cadre_id"]
             isOneToOne: false
             referencedRelation: "cadres"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_lead_cadre_id_fkey"
+            columns: ["lead_cadre_id"]
+            isOneToOne: false
+            referencedRelation: "mv_cadre_leaderboard"
             referencedColumns: ["id"]
           },
         ]
@@ -1456,6 +1477,21 @@ export type Database = {
       }
     }
     Views: {
+      mv_cadre_leaderboard: {
+        Row: {
+          city: string | null
+          constituency: string | null
+          id: string | null
+          level: string | null
+          name: string | null
+          points: number | null
+          profile_photo_url: string | null
+          rank_tier: string | null
+          resolved_count: number | null
+          stars: number | null
+        }
+        Relationships: []
+      }
       mv_city_problem_counts: {
         Row: {
           city: string | null
@@ -1465,10 +1501,48 @@ export type Database = {
         }
         Relationships: []
       }
+      mv_constituency_kpis: {
+        Row: {
+          avg_resolution_hours: number | null
+          citizen_confirmed_count: number | null
+          constituency: string | null
+          emergency_count: number | null
+          open_count: number | null
+          reports_24h: number | null
+          resolved_count: number | null
+          resolved_today: number | null
+          total: number | null
+        }
+        Relationships: []
+      }
       mv_constituency_problem_counts: {
         Row: {
           constituency: string | null
           pending: number | null
+          resolved: number | null
+          total: number | null
+        }
+        Relationships: []
+      }
+      mv_department_kpis: {
+        Row: {
+          avg_resolution_hours: number | null
+          department: string | null
+          emergency_count: number | null
+          open_count: number | null
+          reports_24h: number | null
+          resolved_count: number | null
+          resolved_today: number | null
+          total: number | null
+        }
+        Relationships: []
+      }
+      mv_problem_trends_daily: {
+        Row: {
+          category: string | null
+          constituency: string | null
+          day: string | null
+          department: string | null
           resolved: number | null
           total: number | null
         }
@@ -1503,6 +1577,98 @@ export type Database = {
         Args: { _problem_id: string; _trigger: string }
         Returns: number
       }
+      feed_cadres: {
+        Args: { _constituency?: string; _cursor?: string; _limit?: number }
+        Returns: {
+          active: boolean
+          approved: boolean
+          area: string
+          city: string
+          constituency: string
+          created_at: string
+          email: string
+          id: string
+          level: string
+          name: string
+          next_cursor: string
+          phone: string
+          points: number
+          profile_photo_url: string
+          rank_tier: string
+          resolved_count: number
+          stars: number
+          ward_number: string
+        }[]
+      }
+      feed_escalations: {
+        Args: { _cursor?: string; _limit?: number; _status?: string }
+        Returns: {
+          created_at: string
+          id: string
+          next_cursor: string
+          problem_id: string
+          reason: string
+          resolved_at: string
+          status: string
+          to_level: string
+        }[]
+      }
+      feed_problems: {
+        Args: {
+          _category?: string
+          _constituency?: string
+          _cursor?: string
+          _department?: string
+          _limit?: number
+          _status?: string
+        }
+        Returns: {
+          area: string
+          category: string
+          city: string
+          constituency: string
+          created_at: string
+          department: string
+          id: string
+          latitude: number
+          longitude: number
+          next_cursor: string
+          reporter_name: string
+          reporter_phone: string
+          severity: string
+          status: string
+          support_count: number
+          ticket_no: string
+          title: string
+          urgency: string
+        }[]
+      }
+      feed_welfare: {
+        Args: {
+          _constituency?: string
+          _cursor?: string
+          _department?: string
+          _limit?: number
+          _status?: string
+        }
+        Returns: {
+          city: string
+          constituency: string
+          created_at: string
+          department: string
+          id: string
+          months_pending: string
+          next_cursor: string
+          reporter_name: string
+          reporter_phone: string
+          scheme_name: string
+          scheme_type: string
+          status: string
+          ticket_no: string
+          title: string
+          urgency: string
+        }[]
+      }
       get_cadre_leaderboard: {
         Args: { _constituency?: string; _limit?: number }
         Returns: {
@@ -1517,6 +1683,27 @@ export type Database = {
           resolved_count: number
           stars: number
         }[]
+      }
+      get_cadre_leaderboard_cached: {
+        Args: { _constituency?: string; _limit?: number }
+        Returns: {
+          city: string | null
+          constituency: string | null
+          id: string | null
+          level: string | null
+          name: string | null
+          points: number | null
+          profile_photo_url: string | null
+          rank_tier: string | null
+          resolved_count: number | null
+          stars: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "mv_cadre_leaderboard"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_city_breakdown: {
         Args: { _city: string }
@@ -1543,6 +1730,26 @@ export type Database = {
           total: number
         }[]
       }
+      get_constituency_kpis: {
+        Args: { _constituency?: string }
+        Returns: {
+          avg_resolution_hours: number | null
+          citizen_confirmed_count: number | null
+          constituency: string | null
+          emergency_count: number | null
+          open_count: number | null
+          reports_24h: number | null
+          resolved_count: number | null
+          resolved_today: number | null
+          total: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "mv_constituency_kpis"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_constituency_problem_counts: {
         Args: never
         Returns: {
@@ -1552,11 +1759,38 @@ export type Database = {
           total: number
         }[]
       }
+      get_department_kpis: {
+        Args: { _department?: string }
+        Returns: {
+          avg_resolution_hours: number | null
+          department: string | null
+          emergency_count: number | null
+          open_count: number | null
+          reports_24h: number | null
+          resolved_count: number | null
+          resolved_today: number | null
+          total: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "mv_department_kpis"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_notification_recipients: {
         Args: { _problem_id: string; _trigger: string }
         Returns: {
           email: string
           role: string
+        }[]
+      }
+      get_problem_trends: {
+        Args: { _constituency?: string; _days?: number; _department?: string }
+        Returns: {
+          day: string
+          resolved: number
+          total: number
         }[]
       }
       get_public_cadres: {
@@ -1612,6 +1846,8 @@ export type Database = {
         Args: { _cadre_id: string }
         Returns: boolean
       }
+      problem_detail: { Args: { _id: string }; Returns: Json }
+      refresh_kpi_views: { Args: never; Returns: undefined }
       refresh_map_stats: { Args: never; Returns: undefined }
       refresh_public_stats: { Args: never; Returns: undefined }
       submit_corruption_report: {
