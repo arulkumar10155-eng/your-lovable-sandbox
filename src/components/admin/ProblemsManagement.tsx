@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { throttle } from '@/lib/throttle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -81,9 +82,8 @@ const ProblemsManagement: React.FC<Props> = ({ allowedConstituencies, isAdmin })
 
   useEffect(() => { load(); }, []);
   useEffect(() => {
-    // Scope realtime to allowed constituencies when possible; throttle to 1/s
+    // Scope realtime to allowed constituencies when possible; throttle to 1.5s
     // so a burst of inserts can't trigger 100 refetches.
-    const { throttle } = require('@/lib/throttle');
     const throttled = throttle(load, 1500);
     const baseCh = supabase.channel(`pm:${(allowedConstituencies || ['all']).join(',')}`);
     if (!isAdmin && allowedConstituencies?.length) {
