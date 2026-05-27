@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { throttle } from '@/lib/throttle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -45,7 +46,10 @@ const ProblemsManagement: React.FC<Props> = ({ allowedConstituencies, isAdmin })
 
   const load = async () => {
     setLoading(true);
-    let q = supabase.from('problems').select('*').order('created_at', { ascending: false }).limit(500);
+    // Lean columns + hard cap. Full detail loads via problem_detail RPC on row click.
+    let q = supabase.from('problems').select(
+      'id,ticket_no,title,description,category,department,status,urgency,severity,constituency,city,area,reporter_name,reporter_phone,support_count,latitude,longitude,created_at,resolved_at,citizen_confirmed'
+    ).order('created_at', { ascending: false }).limit(200);
     if (!isAdmin && allowedConstituencies?.length) q = q.in('constituency', allowedConstituencies);
     const { data } = await q;
     setRows(data || []);
@@ -78,9 +82,22 @@ const ProblemsManagement: React.FC<Props> = ({ allowedConstituencies, isAdmin })
 
   useEffect(() => { load(); }, []);
   useEffect(() => {
-    const ch = supabase.channel('admin-problems').on('postgres_changes', { event: '*', schema: 'public', table: 'problems' }, load).subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, []);
+    // Scope realtime to allowed constituencies when possible; throttle to 1.5s
+    // so a burst of inserts can't trigger 100 refetches.
+    const throttled = throttle(load, 1500);
+    const baseCh = supabase.channel(`pm:${(allowedConstituencies || ['all']).join(',')}`);
+    if (!isAdmin && allowedConstituencies?.length) {
+      allowedConstituencies.forEach((c) => {
+        baseCh.on('postgres_changes' as any,
+          { event: '*', schema: 'public', table: 'problems', filter: `constituency=eq.${c}` },
+          throttled);
+      });
+    } else {
+      baseCh.on('postgres_changes' as any, { event: '*', schema: 'public', table: 'problems' }, throttled);
+    }
+    baseCh.subscribe();
+    return () => { supabase.removeChannel(baseCh); };
+  }, [isAdmin, (allowedConstituencies || []).join('|')]);
 
   const filtered = useMemo(() => rows.filter(r =>
     (dept === 'all' || r.department === dept) &&

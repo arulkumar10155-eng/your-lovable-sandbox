@@ -79,27 +79,31 @@ const AnalyticsDashboard: React.FC<Props> = ({ scope }) => {
   };
 
   const load = async () => {
+    // Lean projection + lower cap (was 2000). Deep KPIs come from MV-backed
+    // RPC via <CommandCenterKpis>; this load only powers secondary charts.
     const { data: probs } = await filterProblems(
-      supabase.from('problems').select('*').order('created_at', { ascending: false }).limit(2000)
+      supabase.from('problems').select(
+        'id,ticket_no,title,category,department,status,urgency,constituency,city,area,reporter_phone,created_at,resolved_at,citizen_confirmed'
+      ).order('created_at', { ascending: false }).limit(500)
     );
     setProblems(probs || []);
     const ids = (probs || []).map((p: any) => p.id);
 
     const [escRes, updRes, survRes] = await Promise.all([
-      ids.length ? supabase.from('escalations').select('*').in('problem_id', ids).order('created_at', { ascending: false }).limit(500) : Promise.resolve({ data: [] as any[] }),
-      ids.length ? supabase.from('problem_updates').select('*').in('problem_id', ids).order('created_at', { ascending: false }).limit(500) : Promise.resolve({ data: [] as any[] }),
-      ids.length ? supabase.from('satisfaction_surveys').select('*').in('problem_id', ids).limit(500) : Promise.resolve({ data: [] as any[] }),
+      ids.length ? supabase.from('escalations').select('id,problem_id,status,to_level,reason,created_at').in('problem_id', ids).order('created_at', { ascending: false }).limit(200) : Promise.resolve({ data: [] as any[] }),
+      ids.length ? supabase.from('problem_updates').select('id,problem_id,status,created_at,updated_by').in('problem_id', ids).order('created_at', { ascending: false }).limit(200) : Promise.resolve({ data: [] as any[] }),
+      ids.length ? supabase.from('satisfaction_surveys').select('rating,problem_id').in('problem_id', ids).limit(200) : Promise.resolve({ data: [] as any[] }),
     ]);
     setEscalations(escRes.data || []);
     setUpdates(updRes.data || []);
     setSurveys(survRes.data || []);
 
-    let cadreQ = supabase.from('cadres').select('id,name,constituency,city,points,stars,resolved_count,rank_tier,level,active,profile_photo_url').eq('active', true).order('points', { ascending: false }).limit(200);
+    let cadreQ = supabase.from('cadres').select('id,name,constituency,city,points,stars,resolved_count,rank_tier,level,active,profile_photo_url').eq('active', true).order('points', { ascending: false }).limit(100);
     if (scope.kind === 'constituency' && scope.constituencies.length) cadreQ = cadreQ.in('constituency', scope.constituencies);
     const { data: c } = await cadreQ;
     setCadres(c || []);
 
-    let teamQ = supabase.from('teams').select('*').eq('active', true).order('points', { ascending: false }).limit(100);
+    let teamQ = supabase.from('teams').select('id,name,points,stars,resolved_count,constituency,department').eq('active', true).order('points', { ascending: false }).limit(50);
     if (scope.kind === 'constituency' && scope.constituencies.length) teamQ = teamQ.in('constituency', scope.constituencies);
     if (scope.kind === 'department') teamQ = teamQ.eq('department', scope.department);
     const { data: t } = await teamQ;
@@ -108,21 +112,31 @@ const AnalyticsDashboard: React.FC<Props> = ({ scope }) => {
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [JSON.stringify(scope)]);
 
-  // Realtime feed
+  // Realtime feed — scope by constituency/department to avoid global broadcast storm.
   useEffect(() => {
     const inScope = (p: any) => {
       if (scope.kind === 'constituency') return scope.constituencies.includes(p.constituency);
       if (scope.kind === 'department') return p.department === scope.department;
       return true;
     };
-    const ch = supabase.channel('analytics-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'problems' }, (payload: any) => {
+    let lastReload = 0;
+    const throttledReload = () => {
+      const now = Date.now();
+      if (now - lastReload < 5000) return;
+      lastReload = now;
+      load();
+    };
+    const ch = supabase.channel(`analytics:${scope.kind}:${scope.kind === 'constituency' ? scope.constituencies.join(',') : scope.kind === 'department' ? scope.department : 'all'}`);
+    const probFilter = scope.kind === 'department' ? { filter: `department=eq.${scope.department}` }
+      : (scope.kind === 'constituency' && scope.constituencies.length === 1) ? { filter: `constituency=eq.${scope.constituencies[0]}` }
+      : {};
+    ch.on('postgres_changes' as any, { event: '*', schema: 'public', table: 'problems', ...probFilter }, (payload: any) => {
         const p = payload.new || payload.old;
         if (!p || !inScope(p)) return;
         if (payload.eventType === 'INSERT') {
           pushFeed({ id: p.id + ':new', kind: 'report', tone: p.urgency === 'emergency' ? 'text-red-600' : 'text-blue-600',
             text: `${p.urgency === 'emergency' ? '🚨' : '🆕'} ${p.title || 'New report'} — ${p.area || p.constituency || p.city || ''}` });
-          setProblems(prev => [p, ...prev].slice(0, 2000));
+          setProblems(prev => [p, ...prev].slice(0, 500));
         } else if (payload.eventType === 'UPDATE') {
           const o = payload.old as any;
           if (RESOLVED.includes(p.status) && !RESOLVED.includes(o?.status)) {
@@ -131,17 +145,15 @@ const AnalyticsDashboard: React.FC<Props> = ({ scope }) => {
           }
           setProblems(prev => prev.map(x => x.id === p.id ? { ...x, ...p } : x));
         }
+        throttledReload();
       })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'escalations' }, (payload: any) => {
+      .on('postgres_changes' as any, { event: 'INSERT', schema: 'public', table: 'escalations' }, (payload: any) => {
         const e = payload.new;
         pushFeed({ id: e.id, kind: 'esc', tone: 'text-orange-600', text: `⚠️ Escalation → ${e.to_level}: ${e.reason}` });
       })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'problem_assignments' }, (payload: any) => {
-        const a = payload.new;
-        pushFeed({ id: a.id, kind: 'assign', tone: 'text-violet-600', text: `👷 Assignment created` });
-      })
       .subscribe(s => setConnected(s === 'SUBSCRIBED'));
     return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(scope)]);
 
   const pushFeed = (item: { id: string; kind: string; text: string; tone: string }) =>
